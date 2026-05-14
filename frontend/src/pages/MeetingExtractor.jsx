@@ -29,10 +29,10 @@ const MeetingExtractor = () => {
   const loadData = async () => {
     try {
       const [meetingsData, emailsData] = await Promise.all([
-        getMeetings(),
+        getMeetings({ page: 1, limit: 100 }),
         getEmails()
       ]);
-      setMeetings(Array.isArray(meetingsData) ? meetingsData : []);
+      setMeetings(Array.isArray(meetingsData) ? meetingsData : (meetingsData?.data || []));
       setEmails(emailsData.emails || []);
     } catch (error) {
       console.error('Failed to load data:', error);

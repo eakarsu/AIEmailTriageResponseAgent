@@ -26,6 +26,9 @@ import TemplateSuggester from './pages/TemplateSuggester';
 import SpamIntelligence from './pages/SpamIntelligence';
 import EmailPrioritizer from './pages/EmailPrioritizer';
 import SubjectOptimizer from './pages/SubjectOptimizer';
+import AIAdvanced from './pages/AIAdvanced';
+
+import Batch03Features from './pages/Batch03Features';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -70,6 +73,7 @@ function App() {
         <ToastProvider>
           <Router>
             <Routes>
+          <Route path="/batch03" element={<Batch03Features />} />
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/" element={<ProtectedRoute><ErrorBoundary><Dashboard /></ErrorBoundary></ProtectedRoute>} />
               <Route path="/emails" element={<ProtectedRoute><ErrorBoundary><Emails /></ErrorBoundary></ProtectedRoute>} />
@@ -90,6 +94,7 @@ function App() {
               <Route path="/spam-intelligence" element={<ProtectedRoute><ErrorBoundary><SpamIntelligence /></ErrorBoundary></ProtectedRoute>} />
               <Route path="/email-prioritizer" element={<ProtectedRoute><ErrorBoundary><EmailPrioritizer /></ErrorBoundary></ProtectedRoute>} />
               <Route path="/subject-optimizer" element={<ProtectedRoute><ErrorBoundary><SubjectOptimizer /></ErrorBoundary></ProtectedRoute>} />
+              <Route path="/ai-advanced" element={<ProtectedRoute><ErrorBoundary><AIAdvanced /></ErrorBoundary></ProtectedRoute>} />
             </Routes>
           </Router>
           <ToastContainer />

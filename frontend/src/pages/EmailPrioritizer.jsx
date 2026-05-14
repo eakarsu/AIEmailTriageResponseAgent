@@ -29,10 +29,10 @@ const EmailPrioritizer = () => {
   const loadData = async () => {
     try {
       const [prioritiesData, emailsData] = await Promise.all([
-        getEmailPriorities(),
+        getEmailPriorities({ page: 1, limit: 100 }),
         getEmails()
       ]);
-      setPriorities(Array.isArray(prioritiesData) ? prioritiesData : []);
+      setPriorities(Array.isArray(prioritiesData) ? prioritiesData : (prioritiesData?.data || []));
       setEmails(emailsData.emails || []);
     } catch (error) {
       console.error('Failed to load data:', error);

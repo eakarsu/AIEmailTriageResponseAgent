@@ -2,36 +2,51 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { aiRateLimiter } = require('../../middleware/rateLimiter');
 const { prioritizeForProductivity } = require('../services/aiService');
 
-// Get all email priorities for user
+// Get all email priorities for user (paginated)
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { action_required, batching_category } = req.query;
-    let query = `
-      SELECT ep.*, e.subject, e.from_email, e.from_name
-      FROM email_priorities ep
-      LEFT JOIN emails e ON ep.email_id = e.id
-      WHERE ep.user_id = $1
-    `;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
     const params = [req.user.id];
-    let paramIndex = 2;
-
+    let where = 'WHERE ep.user_id = $1';
     if (action_required !== undefined) {
-      query += ` AND ep.action_required = $${paramIndex}`;
       params.push(action_required === 'true');
-      paramIndex++;
+      where += ` AND ep.action_required = $${params.length}`;
     }
-
     if (batching_category) {
-      query += ` AND ep.batching_category = $${paramIndex}`;
       params.push(batching_category);
+      where += ` AND ep.batching_category = $${params.length}`;
     }
 
-    query += ' ORDER BY ep.productivity_score DESC, ep.created_at DESC';
+    const countRes = await pool.query(
+      `SELECT COUNT(*) FROM email_priorities ep ${where}`,
+      params
+    );
+    const total = parseInt(countRes.rows[0].count);
 
-    const result = await pool.query(query, params);
-    res.json(result.rows);
+    params.push(limit, offset);
+    const limitIdx = params.length - 1;
+    const offsetIdx = params.length;
+
+    const result = await pool.query(
+      `SELECT ep.*, e.subject, e.from_email, e.from_name
+       FROM email_priorities ep
+       LEFT JOIN emails e ON ep.email_id = e.id
+       ${where}
+       ORDER BY ep.productivity_score DESC, ep.created_at DESC
+       LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+      params
+    );
+    res.json({
+      data: result.rows,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+    });
   } catch (error) {
     console.error('Get email priorities error:', error);
     res.status(500).json({ error: error.message });
@@ -59,7 +74,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // Analyze email for productivity (AI-powered)
-router.post('/analyze/:emailId', authenticateToken, async (req, res) => {
+router.post('/analyze/:emailId', authenticateToken, aiRateLimiter, async (req, res) => {
   try {
     const emailResult = await pool.query(
       'SELECT * FROM emails WHERE id = $1 AND user_id = $2',

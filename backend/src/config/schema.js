@@ -318,10 +318,57 @@ const createTables = async () => {
     }
   }
 
+  // Notifications table (for in-app reminder notifications)
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS notifications (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      type VARCHAR(100) DEFAULT 'reminder',
+      title VARCHAR(500),
+      message TEXT,
+      related_entity_type VARCHAR(100),
+      related_entity_id INTEGER,
+      is_read BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+  } catch (error) {
+    console.error('Error creating notifications table:', error.message);
+  }
+
+  // Unified ai_results JSONB cache table (cross-feature AI history/cache)
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS ai_results (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      feature VARCHAR(100) NOT NULL,
+      entity_type VARCHAR(100),
+      entity_id INTEGER,
+      prompt_summary TEXT,
+      result JSONB NOT NULL,
+      model VARCHAR(100),
+      tokens_used INTEGER,
+      duration_ms INTEGER,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ai_results_user_feature ON ai_results(user_id, feature)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ai_results_entity ON ai_results(entity_type, entity_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ai_results_result_gin ON ai_results USING GIN (result)`);
+  } catch (error) {
+    console.error('Error creating ai_results table:', error.message);
+  }
+
   // Add columns that may be missing from existing tables
   const alterQueries = [
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255)`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP`,
+    // Convert ai_response columns to JSONB if not already
+    `ALTER TABLE priority_scores ALTER COLUMN ai_response TYPE JSONB USING (CASE WHEN ai_response IS NULL THEN NULL WHEN ai_response::text = '' THEN NULL ELSE ai_response::jsonb END)`,
+    `ALTER TABLE meetings ALTER COLUMN ai_response TYPE JSONB USING (CASE WHEN ai_response IS NULL THEN NULL WHEN ai_response::text = '' THEN NULL ELSE ai_response::jsonb END)`,
+    `ALTER TABLE followup_reminders ALTER COLUMN ai_response TYPE JSONB USING (CASE WHEN ai_response IS NULL THEN NULL WHEN ai_response::text = '' THEN NULL ELSE ai_response::jsonb END)`,
+    `ALTER TABLE template_suggestions ALTER COLUMN ai_response TYPE JSONB USING (CASE WHEN ai_response IS NULL THEN NULL WHEN ai_response::text = '' THEN NULL ELSE ai_response::jsonb END)`,
+    `ALTER TABLE spam_analysis ALTER COLUMN ai_response TYPE JSONB USING (CASE WHEN ai_response IS NULL THEN NULL WHEN ai_response::text = '' THEN NULL ELSE ai_response::jsonb END)`,
+    `ALTER TABLE email_priorities ALTER COLUMN ai_response TYPE JSONB USING (CASE WHEN ai_response IS NULL THEN NULL WHEN ai_response::text = '' THEN NULL ELSE ai_response::jsonb END)`,
+    `ALTER TABLE subject_optimizations ALTER COLUMN ai_response TYPE JSONB USING (CASE WHEN ai_response IS NULL THEN NULL WHEN ai_response::text = '' THEN NULL ELSE ai_response::jsonb END)`,
   ];
 
   for (const query of alterQueries) {

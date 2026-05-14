@@ -27,10 +27,11 @@ const PriorityScorer = () => {
   const loadData = async () => {
     try {
       const [scoresData, emailsData] = await Promise.all([
-        getPriorityScores(),
+        getPriorityScores({ page: 1, limit: 100 }),
         getEmails()
       ]);
-      setScores(Array.isArray(scoresData) ? scoresData : []);
+      const scoresList = Array.isArray(scoresData) ? scoresData : (scoresData?.data || []);
+      setScores(scoresList);
       setEmails(emailsData.emails || []);
     } catch (error) {
       console.error('Failed to load data:', error);

@@ -3,6 +3,7 @@ const pool = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { categorizeEmail, prioritizeEmail, analyzeEmailSentiment, extractActionItems, summarizeEmail } = require('../services/aiService');
 const { applyRulesToEmail } = require('../services/rulesEngine');
+const { aiRateLimiter } = require('../../middleware/rateLimiter');
 
 const router = express.Router();
 
@@ -68,11 +69,20 @@ router.get('/', authenticateToken, async (req, res) => {
       pool.query(countQuery, countParams)
     ]);
 
+    const total = parseInt(countResult.rows[0].count);
+    const parsedLimit = parseInt(limit);
+    const parsedOffset = parseInt(offset);
+    const page = Math.floor(parsedOffset / parsedLimit) + 1;
+
     res.json({
+      data: dataResult.rows,
       emails: dataResult.rows,
-      total: parseInt(countResult.rows[0].count),
-      limit: parseInt(limit),
-      offset: parseInt(offset)
+      pagination: {
+        page,
+        limit: parsedLimit,
+        total,
+        totalPages: Math.ceil(total / parsedLimit)
+      }
     });
   } catch (error) {
     console.error('Get emails error:', error);
@@ -103,6 +113,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const { from_email, from_name, to_email, subject, body, labels } = req.body;
+
+    // Input validation
+    if (!subject || !body || !from_email) {
+      return res.status(400).json({ error: 'subject, body, and sender (from_email) are required' });
+    }
 
     // Fetch user's custom categories with keywords
     const categoriesResult = await pool.query(
@@ -236,7 +251,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 });
 
 // AI: Categorize email
-router.post('/:id/categorize', authenticateToken, async (req, res) => {
+router.post('/:id/categorize', authenticateToken, aiRateLimiter, async (req, res) => {
   try {
     const emailResult = await pool.query(
       'SELECT * FROM emails WHERE id = $1 AND user_id = $2',
@@ -270,7 +285,7 @@ router.post('/:id/categorize', authenticateToken, async (req, res) => {
 });
 
 // AI: Prioritize email
-router.post('/:id/prioritize', authenticateToken, async (req, res) => {
+router.post('/:id/prioritize', authenticateToken, aiRateLimiter, async (req, res) => {
   try {
     const emailResult = await pool.query(
       'SELECT * FROM emails WHERE id = $1 AND user_id = $2',
@@ -297,7 +312,7 @@ router.post('/:id/prioritize', authenticateToken, async (req, res) => {
 });
 
 // AI: Analyze sentiment
-router.post('/:id/sentiment', authenticateToken, async (req, res) => {
+router.post('/:id/sentiment', authenticateToken, aiRateLimiter, async (req, res) => {
   try {
     const emailResult = await pool.query(
       'SELECT * FROM emails WHERE id = $1 AND user_id = $2',
@@ -325,7 +340,7 @@ router.post('/:id/sentiment', authenticateToken, async (req, res) => {
 });
 
 // AI: Extract action items
-router.post('/:id/actions', authenticateToken, async (req, res) => {
+router.post('/:id/actions', authenticateToken, aiRateLimiter, async (req, res) => {
   try {
     const emailResult = await pool.query(
       'SELECT * FROM emails WHERE id = $1 AND user_id = $2',
@@ -353,7 +368,7 @@ router.post('/:id/actions', authenticateToken, async (req, res) => {
 });
 
 // AI: Summarize email
-router.post('/:id/summarize', authenticateToken, async (req, res) => {
+router.post('/:id/summarize', authenticateToken, aiRateLimiter, async (req, res) => {
   try {
     const emailResult = await pool.query(
       'SELECT * FROM emails WHERE id = $1 AND user_id = $2',

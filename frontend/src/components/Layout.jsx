@@ -39,6 +39,7 @@ const Layout = ({ children }) => {
     { path: '/spam-intelligence', label: 'Spam Intelligence', icon: Shield, color: 'text-red-500' },
     { path: '/email-prioritizer', label: 'Email Prioritizer', icon: Zap, color: 'text-indigo-500' },
     { path: '/subject-optimizer', label: 'Subject Optimizer', icon: Sparkles, color: 'text-pink-500' },
+    { path: '/ai-advanced', label: 'Advanced AI', icon: Brain, color: 'text-indigo-500' },
   ];
 
   const handleLogout = () => {

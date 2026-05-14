@@ -28,11 +28,11 @@ const SpamIntelligence = () => {
   const loadData = async () => {
     try {
       const [analysesData, emailsData, statsData] = await Promise.all([
-        getSpamAnalyses(),
+        getSpamAnalyses({ page: 1, limit: 100 }),
         getEmails(),
         getSpamStats()
       ]);
-      setAnalyses(Array.isArray(analysesData) ? analysesData : []);
+      setAnalyses(Array.isArray(analysesData) ? analysesData : (analysesData?.data || []));
       setEmails(emailsData.emails || []);
       setStats(statsData);
     } catch (error) {

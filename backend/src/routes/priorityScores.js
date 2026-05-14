@@ -2,20 +2,35 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { aiRateLimiter } = require('../../middleware/rateLimiter');
 const { scorePriority } = require('../services/aiService');
 
-// Get all priority scores for user
+// Get all priority scores for user (paginated)
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const countRes = await pool.query(
+      'SELECT COUNT(*) FROM priority_scores WHERE user_id = $1',
+      [req.user.id]
+    );
+    const total = parseInt(countRes.rows[0].count);
+
     const result = await pool.query(
       `SELECT ps.*, e.subject, e.from_email, e.from_name
        FROM priority_scores ps
        LEFT JOIN emails e ON ps.email_id = e.id
        WHERE ps.user_id = $1
-       ORDER BY ps.created_at DESC`,
-      [req.user.id]
+       ORDER BY ps.created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [req.user.id, limit, offset]
     );
-    res.json(result.rows);
+    res.json({
+      data: result.rows,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+    });
   } catch (error) {
     console.error('Get priority scores error:', error);
     res.status(500).json({ error: error.message });
@@ -43,7 +58,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // Analyze email priority (AI-powered)
-router.post('/analyze/:emailId', authenticateToken, async (req, res) => {
+router.post('/analyze/:emailId', authenticateToken, aiRateLimiter, async (req, res) => {
   try {
     // Get email
     const emailResult = await pool.query(

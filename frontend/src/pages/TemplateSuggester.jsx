@@ -28,13 +28,13 @@ const TemplateSuggester = () => {
   const loadData = async () => {
     try {
       const [suggestionsData, emailsData, templatesData] = await Promise.all([
-        getTemplateSuggestions(),
+        getTemplateSuggestions({ page: 1, limit: 100 }),
         getEmails(),
         getTemplates()
       ]);
-      setSuggestions(Array.isArray(suggestionsData) ? suggestionsData : []);
+      setSuggestions(Array.isArray(suggestionsData) ? suggestionsData : (suggestionsData?.data || []));
       setEmails(emailsData.emails || []);
-      setTemplates(Array.isArray(templatesData) ? templatesData : []);
+      setTemplates(Array.isArray(templatesData) ? templatesData : (templatesData?.data || []));
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {

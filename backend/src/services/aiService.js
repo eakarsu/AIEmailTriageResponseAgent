@@ -3,7 +3,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY?.replace(/"/g, '');
 const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1';
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL?.replace(/"/g, '') || 'anthropic/claude-haiku-4.5';
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL?.replace(/"/g, '') || 'anthropic/claude-3-5-sonnet-20241022';
 
 // Debug: Log config on startup
 console.log('OpenRouter Config:', {
@@ -13,31 +13,70 @@ console.log('OpenRouter Config:', {
   model: OPENROUTER_MODEL
 });
 
-// Helper to clean AI responses and extract valid JSON
-// Handles: markdown code blocks, trailing text after JSON, etc.
-const cleanJsonResponse = (content) => {
-  let cleaned = content.trim();
-  // Strip markdown code blocks
-  if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```[\s\S]*$/, '');
-  }
-  // Try direct parse first
+// parseAIJson - 3-strategy AI JSON response parser
+// Strategy 1: direct JSON.parse on trimmed content
+// Strategy 2: strip markdown code fences (```json ... ```), then parse
+// Strategy 3: brace-matching extraction of first complete JSON object/array
+const parseAIJson = (content) => {
+  if (content == null) throw new Error('parseAIJson: empty content');
+  const raw = String(content).trim();
+
+  // Strategy 1: direct parse
   try {
-    return JSON.parse(cleaned);
-  } catch (e) {
-    // Extract JSON object by finding matching braces
-    const start = cleaned.indexOf('{');
-    if (start === -1) throw e;
-    let depth = 0;
-    let end = -1;
-    for (let i = start; i < cleaned.length; i++) {
-      if (cleaned[i] === '{') depth++;
-      else if (cleaned[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
+    return JSON.parse(raw);
+  } catch (_) {}
+
+  // Strategy 2: strip markdown code fences
+  let cleaned = raw;
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```[\s\S]*$/, '');
+    try {
+      return JSON.parse(cleaned.trim());
+    } catch (_) {}
+  } else {
+    // Sometimes fences appear inline
+    const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenceMatch) {
+      try {
+        return JSON.parse(fenceMatch[1].trim());
+      } catch (_) {}
     }
-    if (end === -1) throw e;
-    return JSON.parse(cleaned.substring(start, end + 1));
   }
+
+  // Strategy 3: brace-matching extraction
+  const objStart = cleaned.indexOf('{');
+  const arrStart = cleaned.indexOf('[');
+  let start = -1;
+  let openCh, closeCh;
+  if (objStart !== -1 && (arrStart === -1 || objStart < arrStart)) {
+    start = objStart; openCh = '{'; closeCh = '}';
+  } else if (arrStart !== -1) {
+    start = arrStart; openCh = '['; closeCh = ']';
+  }
+  if (start === -1) throw new Error('parseAIJson: no JSON object/array found');
+
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (escape) { escape = false; continue; }
+    if (ch === '\\') { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === openCh) depth++;
+    else if (ch === closeCh) {
+      depth--;
+      if (depth === 0) {
+        return JSON.parse(cleaned.substring(start, i + 1));
+      }
+    }
+  }
+  throw new Error('parseAIJson: unbalanced braces');
 };
+
+// Backward-compatible alias
+const cleanJsonResponse = parseAIJson;
 
 const callOpenRouter = async (messages, model = OPENROUTER_MODEL) => {
   console.log('Calling OpenRouter with model:', model);
@@ -662,6 +701,8 @@ module.exports = {
   extractActionItems,
   summarizeEmail,
   callOpenRouter,
+  parseAIJson,
+  cleanJsonResponse,
   // New AI features
   scorePriority,
   extractMeeting,

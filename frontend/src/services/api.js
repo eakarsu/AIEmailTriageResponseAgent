@@ -441,9 +441,11 @@ export const bulkDeleteCategories = (ids) =>
 
 // ==================== NEW AI FEATURES ====================
 
-// Priority Scores (AI Priority Scorer)
-export const getPriorityScores = () =>
-  fetch(`${API_BASE}/priority-scores`, { headers: getHeaders() }).then(handleResponse);
+// Priority Scores (AI Priority Scorer) - paginated
+export const getPriorityScores = (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return fetch(`${API_BASE}/priority-scores${query ? `?${query}` : ''}`, { headers: getHeaders() }).then(handleResponse);
+};
 
 export const getPriorityScore = (id) =>
   fetch(`${API_BASE}/priority-scores/${id}`, { headers: getHeaders() }).then(handleResponse);
@@ -474,9 +476,11 @@ export const deletePriorityScore = (id) =>
     headers: getHeaders()
   }).then(handleResponse);
 
-// Meetings (AI Meeting Extractor)
-export const getMeetings = () =>
-  fetch(`${API_BASE}/meetings`, { headers: getHeaders() }).then(handleResponse);
+// Meetings (AI Meeting Extractor) - paginated
+export const getMeetings = (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return fetch(`${API_BASE}/meetings${query ? `?${query}` : ''}`, { headers: getHeaders() }).then(handleResponse);
+};
 
 export const getMeeting = (id) =>
   fetch(`${API_BASE}/meetings/${id}`, { headers: getHeaders() }).then(handleResponse);
@@ -555,9 +559,11 @@ export const deleteFollowup = (id) =>
     headers: getHeaders()
   }).then(handleResponse);
 
-// Template Suggestions (AI Template Suggester)
-export const getTemplateSuggestions = () =>
-  fetch(`${API_BASE}/template-suggestions`, { headers: getHeaders() }).then(handleResponse);
+// Template Suggestions (AI Template Suggester) - paginated
+export const getTemplateSuggestions = (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return fetch(`${API_BASE}/template-suggestions${query ? `?${query}` : ''}`, { headers: getHeaders() }).then(handleResponse);
+};
 
 export const getTemplateSuggestion = (id) =>
   fetch(`${API_BASE}/template-suggestions/${id}`, { headers: getHeaders() }).then(handleResponse);
@@ -670,9 +676,11 @@ export const deleteEmailPriority = (id) =>
     headers: getHeaders()
   }).then(handleResponse);
 
-// Subject Optimizations (AI Email Subject Optimizer - Marketing)
-export const getSubjectOptimizations = () =>
-  fetch(`${API_BASE}/subject-optimizations`, { headers: getHeaders() }).then(handleResponse);
+// Subject Optimizations (AI Email Subject Optimizer - Marketing) - paginated
+export const getSubjectOptimizations = (params = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return fetch(`${API_BASE}/subject-optimizations${query ? `?${query}` : ''}`, { headers: getHeaders() }).then(handleResponse);
+};
 
 export const getSubjectOptimization = (id) =>
   fetch(`${API_BASE}/subject-optimizations/${id}`, { headers: getHeaders() }).then(handleResponse);

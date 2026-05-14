@@ -28,10 +28,10 @@ const SubjectOptimizer = () => {
   const loadData = async () => {
     try {
       const [optimizationsData, emailsData] = await Promise.all([
-        getSubjectOptimizations(),
+        getSubjectOptimizations({ page: 1, limit: 100 }),
         getEmails()
       ]);
-      setOptimizations(Array.isArray(optimizationsData) ? optimizationsData : []);
+      setOptimizations(Array.isArray(optimizationsData) ? optimizationsData : (optimizationsData?.data || []));
       setEmails(emailsData.emails || []);
     } catch (error) {
       console.error('Failed to load data:', error);

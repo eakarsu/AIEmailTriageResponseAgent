@@ -31,10 +31,10 @@ const FollowupReminder = () => {
   const loadData = async () => {
     try {
       const [followupsData, emailsData] = await Promise.all([
-        getFollowups(),
+        getFollowups({ page: 1, limit: 100 }),
         getEmails()
       ]);
-      setFollowups(Array.isArray(followupsData) ? followupsData : []);
+      setFollowups(Array.isArray(followupsData) ? followupsData : (followupsData?.data || []));
       setEmails(emailsData.emails || []);
     } catch (error) {
       console.error('Failed to load data:', error);

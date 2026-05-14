@@ -2,29 +2,47 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { aiRateLimiter } = require('../../middleware/rateLimiter');
 const { suggestFollowUp } = require('../services/aiService');
 
-// Get all follow-up reminders for user
+// Get all follow-up reminders for user (paginated)
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { status } = req.query;
-    let query = `
-      SELECT f.*, e.subject as email_subject, e.from_email, e.from_name
-      FROM followup_reminders f
-      LEFT JOIN emails e ON f.email_id = e.id
-      WHERE f.user_id = $1
-    `;
-    const params = [req.user.id];
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
 
+    const params = [req.user.id];
+    let where = 'WHERE f.user_id = $1';
     if (status) {
-      query += ' AND f.status = $2';
       params.push(status);
+      where += ` AND f.status = $${params.length}`;
     }
 
-    query += ' ORDER BY f.reminder_date ASC';
+    const countRes = await pool.query(
+      `SELECT COUNT(*) FROM followup_reminders f ${where}`,
+      params
+    );
+    const total = parseInt(countRes.rows[0].count);
 
-    const result = await pool.query(query, params);
-    res.json(result.rows);
+    params.push(limit, offset);
+    const limitIdx = params.length - 1;
+    const offsetIdx = params.length;
+
+    const result = await pool.query(
+      `SELECT f.*, e.subject as email_subject, e.from_email, e.from_name
+       FROM followup_reminders f
+       LEFT JOIN emails e ON f.email_id = e.id
+       ${where}
+       ORDER BY f.reminder_date ASC
+       LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+      params
+    );
+    res.json({
+      data: result.rows,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+    });
   } catch (error) {
     console.error('Get follow-ups error:', error);
     res.status(500).json({ error: error.message });
@@ -52,7 +70,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // Suggest follow-up from email (AI-powered)
-router.post('/suggest/:emailId', authenticateToken, async (req, res) => {
+router.post('/suggest/:emailId', authenticateToken, aiRateLimiter, async (req, res) => {
   try {
     const emailResult = await pool.query(
       'SELECT * FROM emails WHERE id = $1 AND user_id = $2',
