@@ -4,7 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import {
   Mail, FileText, Layout as LayoutIcon, Users, Tag, Filter,
   BarChart3, Settings, FolderOpen, Home, LogOut, Menu, X, Brain,
-  Gauge, Calendar, Bell, Shield, Zap, Sparkles, ChevronDown, ChevronUp, UserCog
+  Gauge, Calendar, Bell, Shield, Zap, Sparkles, ChevronDown, ChevronUp, UserCog,
+  LayoutGrid
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -16,6 +17,7 @@ const Layout = ({ children }) => {
 
   const mainNavItems = [
     { path: '/', label: 'Dashboard', icon: Home },
+    { path: '/inbox-views', label: 'Inbox Views', icon: LayoutGrid },
     { path: '/emails', label: 'Inbox', icon: Mail },
     { path: '/drafts', label: 'Drafts', icon: FileText },
     { path: '/templates', label: 'Templates', icon: LayoutIcon },

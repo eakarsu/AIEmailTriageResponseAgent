@@ -29,6 +29,7 @@ import SubjectOptimizer from './pages/SubjectOptimizer';
 import AIAdvanced from './pages/AIAdvanced';
 
 import Batch03Features from './pages/Batch03Features';
+import CustomViewsPage from './pages/CustomViewsPage';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -95,6 +96,9 @@ function App() {
               <Route path="/email-prioritizer" element={<ProtectedRoute><ErrorBoundary><EmailPrioritizer /></ErrorBoundary></ProtectedRoute>} />
               <Route path="/subject-optimizer" element={<ProtectedRoute><ErrorBoundary><SubjectOptimizer /></ErrorBoundary></ProtectedRoute>} />
               <Route path="/ai-advanced" element={<ProtectedRoute><ErrorBoundary><AIAdvanced /></ErrorBoundary></ProtectedRoute>} />
+
+              {/* Custom Views (Inbox Views) */}
+              <Route path="/inbox-views" element={<ProtectedRoute><ErrorBoundary><CustomViewsPage /></ErrorBoundary></ProtectedRoute>} />
             </Routes>
           </Router>
           <ToastContainer />

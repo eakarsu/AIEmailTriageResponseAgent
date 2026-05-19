@@ -81,6 +81,7 @@ app.use('/api/executive-digest', require('./routes/executiveDigest'));
 app.use('/api/writing-assistant', require('./routes/writingAssistant'));
 app.use('/api/calendar-aware', require('./routes/calendarAware'));
 app.use('/api/crm-sync', require('./routes/crmSync'));
+app.use('/api/custom-views', require('./routes/customViews'));
 
 // Health check
 app.get('/api/health', (req, res) => {
