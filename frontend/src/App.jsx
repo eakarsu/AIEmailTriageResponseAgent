@@ -30,6 +30,10 @@ import AIAdvanced from './pages/AIAdvanced';
 
 import Batch03Features from './pages/Batch03Features';
 import CustomViewsPage from './pages/CustomViewsPage';
+import SlaReplyBreachMonitor from './pages/SlaReplyBreachMonitor';
+
+import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
+import CodexOperationsFeature from './pages/CodexOperationsFeature';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -74,6 +78,9 @@ function App() {
         <ToastProvider>
           <Router>
             <Routes>
+        <Route path="/codex/custom-viz" element={<ProtectedRoute><CodexCustomVizFeature /></ProtectedRoute>} />
+        <Route path="/codex/operations" element={<ProtectedRoute><CodexOperationsFeature /></ProtectedRoute>} />
+
           <Route path="/batch03" element={<Batch03Features />} />
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/" element={<ProtectedRoute><ErrorBoundary><Dashboard /></ErrorBoundary></ProtectedRoute>} />
@@ -99,6 +106,7 @@ function App() {
 
               {/* Custom Views (Inbox Views) */}
               <Route path="/inbox-views" element={<ProtectedRoute><ErrorBoundary><CustomViewsPage /></ErrorBoundary></ProtectedRoute>} />
+              <Route path="/sla-reply-breach-monitor" element={<ProtectedRoute><ErrorBoundary><SlaReplyBreachMonitor /></ErrorBoundary></ProtectedRoute>} />
             </Routes>
           </Router>
           <ToastContainer />
