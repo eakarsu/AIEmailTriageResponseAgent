@@ -1,0 +1,1 @@
+if(process.env.CONFIRM_DEMO_SEED!=='yes'||process.env.NODE_ENV==='production'){console.error('Demo seed refused: set CONFIRM_DEMO_SEED=yes outside production.');process.exit(1);}require('../src/seed');

@@ -10,7 +10,13 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    if (process.env.ALLOW_SELF_REGISTRATION !== 'true' || process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'Self-registration is disabled; use an administrator-issued invitation' });
+    }
+    const { email, password, name, organization_id } = req.body;
+    if (!email || !name || !organization_id || !password || password.length < 12) {
+      return res.status(400).json({ error: 'email, name, organization_id and password of at least 12 characters required' });
+    }
 
     // Check if user exists
     const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
@@ -23,8 +29,8 @@ router.post('/register', async (req, res) => {
 
     // Create user
     const result = await pool.query(
-      'INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING id, email, name, role',
-      [email, hashedPassword, name]
+      'INSERT INTO users (email, password, name, tenant_id) VALUES ($1, $2, $3, $4) RETURNING id, email, name, role, tenant_id',
+      [email, hashedPassword, name, organization_id]
     );
 
     const user = result.rows[0];
@@ -68,7 +74,8 @@ router.post('/login', async (req, res) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        tenant_id: user.tenant_id
       },
       token
     });
@@ -81,6 +88,9 @@ router.post('/login', async (req, res) => {
 // Get current user
 router.get('/me', authenticateToken, async (req, res) => {
   try {
+    // The tenant column is additive. A protected core identity lookup should
+    // continue to work while a legacy database is awaiting that migration;
+    // tenant scope comes from the already verified token, never request input.
     const result = await pool.query(
       'SELECT id, email, name, role, created_at FROM users WHERE id = $1',
       [req.user.id]
@@ -90,7 +100,7 @@ router.get('/me', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(result.rows[0]);
+    res.json({ user: { ...result.rows[0], tenant_id: req.user.tenant_id || null } });
   } catch (error) {
     console.error('Get user error:', error);
     res.status(500).json({ error: 'Failed to get user' });
@@ -119,8 +129,9 @@ router.post('/forgot-password', async (req, res) => {
       [token, expires, result.rows[0].id]
     );
 
-    // In dev mode, return token directly (in production, would send via email)
-    res.json({ message: 'Reset token generated.', token });
+    const response = { message: 'If the email exists, reset delivery has been requested.' };
+    if (process.env.NODE_ENV !== 'production' && process.env.EXPOSE_DEMO_TOKENS === 'true') response.token = token;
+    res.json(response);
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ error: 'Failed to process password reset' });
@@ -232,7 +243,8 @@ router.put('/profile', authenticateToken, async (req, res) => {
 router.get('/users', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, email, name, role, created_at FROM users ORDER BY created_at DESC'
+      'SELECT id, email, name, role, tenant_id, created_at FROM users WHERE tenant_id = $1 ORDER BY created_at DESC',
+      [req.user.tenant_id]
     );
     res.json(result.rows);
   } catch (error) {
@@ -245,7 +257,7 @@ router.get('/users', authenticateToken, requireAdmin, async (req, res) => {
 router.put('/users/:id/role', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { role } = req.body;
-    if (!['user', 'admin'].includes(role)) {
+    if (!['user', 'operator', 'reviewer', 'admin'].includes(role)) {
       return res.status(400).json({ error: 'Invalid role' });
     }
 
@@ -255,8 +267,8 @@ router.put('/users/:id/role', authenticateToken, requireAdmin, async (req, res) 
     }
 
     const result = await pool.query(
-      'UPDATE users SET role = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id, email, name, role',
-      [role, req.params.id]
+      'UPDATE users SET role = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3 RETURNING id, email, name, role, tenant_id',
+      [role, req.params.id, req.user.tenant_id]
     );
 
     if (result.rows.length === 0) {

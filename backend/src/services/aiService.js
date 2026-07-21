@@ -5,14 +5,6 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY?.replace(/"/g, '');
 const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1';
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL?.replace(/"/g, '') || 'anthropic/claude-3-5-sonnet-20241022';
 
-// Debug: Log config on startup
-console.log('OpenRouter Config:', {
-  hasApiKey: !!OPENROUTER_API_KEY,
-  apiKeyPrefix: OPENROUTER_API_KEY?.substring(0, 15) + '...',
-  baseUrl: OPENROUTER_BASE_URL,
-  model: OPENROUTER_MODEL
-});
-
 // parseAIJson - 3-strategy AI JSON response parser
 // Strategy 1: direct JSON.parse on trimmed content
 // Strategy 2: strip markdown code fences (```json ... ```), then parse
@@ -79,6 +71,7 @@ const parseAIJson = (content) => {
 const cleanJsonResponse = parseAIJson;
 
 const callOpenRouter = async (messages, model = OPENROUTER_MODEL) => {
+  if (!OPENROUTER_API_KEY) throw new Error('OPENROUTER_API_KEY is not configured');
   console.log('Calling OpenRouter with model:', model);
   const startTime = Date.now();
 

@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config({ path: '../.env' });
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_jwt_key';
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32 || process.env.JWT_SECRET.startsWith('replace-')) throw new Error('JWT_SECRET must contain at least 32 non-placeholder characters');
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -22,7 +23,7 @@ const authenticateToken = (req, res, next) => {
 
 const generateToken = (user) => {
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    { id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id },
     JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
   );

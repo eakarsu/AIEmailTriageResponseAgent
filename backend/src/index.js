@@ -3,7 +3,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 require('dotenv').config({ path: '../.env' });
 
-const { createTables } = require('./config/schema');
 const { startReminderJob } = require('./jobs/reminderJob');
 
 // Import routes
@@ -53,6 +52,13 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '1mb' }));
 
+app.use('/api', (req, res, next) => {
+  const governed = ['/auth', '/health', '/governed-triage'].some((prefix) => req.path === prefix || req.path.startsWith(`${prefix}/`));
+  const legacyEnabled = process.env.NODE_ENV !== 'production' && process.env.ENABLE_LEGACY_PROTOTYPE_ROUTES === 'true';
+  if (governed || legacyEnabled) return next();
+  return res.status(404).json({ error: 'Legacy prototype route is quarantined' });
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/emails', emailRoutes);
@@ -83,6 +89,7 @@ app.use('/api/calendar-aware', require('./routes/calendarAware'));
 app.use('/api/crm-sync', require('./routes/crmSync'));
 app.use('/api/custom-views', require('./routes/customViews'));
 app.use('/api/sla-reply-breach-monitor', require('./routes/slaReplyBreachMonitor'));
+app.use('/api/governed-triage', require('./routes/governedTriage'));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -98,19 +105,10 @@ app.use((err, req, res, next) => {
 // Initialize database and start server
 const startServer = async () => {
   try {
-    await createTables();
-    
-// === Batch 03 Gaps & Frontend Mounts ===
-try {
-  const _batch03 = require('../routes/batch03Gaps');
-  if (typeof authenticateToken === 'function') app.use('/api', authenticateToken, _batch03);
-  else app.use('/api', _batch03);
-} catch (_e) { /* batch03 gap routes optional */ }
-
 app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       // Start reminder job with a 5-second delay to allow full startup
-      setTimeout(startReminderJob, 5000);
+      if (process.env.ENABLE_REMINDER_JOB === 'true') setTimeout(startReminderJob, 5000);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

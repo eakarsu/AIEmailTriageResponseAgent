@@ -1,0 +1,2 @@
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');
+test('triage migration includes mailbox idempotency, governed drafts, send outbox, dispositions, and audit',()=>{const sql=fs.readFileSync(path.join(__dirname,'../migrations/001_governed_triage.sql'),'utf8');for(const term of ['UNIQUE(tenant_id,mailbox_id,external_id)','governed_drafts','email_send_outbox','triage_dispositions','email_triage_events','dead_letter'])assert.ok(sql.includes(term),term);});
