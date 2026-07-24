@@ -3,6 +3,12 @@ const pool = require('./config/database');
 const { createTables } = require('./config/schema');
 require('dotenv').config({ path: '../.env' });
 
+function requireDemoPassword() {
+  const password = process.env.DEMO_PASSWORD || process.env.SEED_DEMO_PASSWORD || process.env.DEMO_SEED_PASSWORD || '';
+  if (password.length < 12 || password.length > 1024) throw new Error('DEMO_PASSWORD must contain 12-1024 characters');
+  return password;
+}
+
 const seedDatabase = async () => {
   try {
     console.log('Creating tables...');
@@ -10,7 +16,7 @@ const seedDatabase = async () => {
 
     // Create demo user
     console.log('Creating demo user...');
-    const hashedPassword = await bcrypt.hash('demo123', 10);
+    const hashedPassword = await bcrypt.hash(requireDemoPassword(), 10);
     const userResult = await pool.query(
       `INSERT INTO users (email, password, name, role)
        VALUES ($1, $2, $3, $4)
@@ -470,7 +476,7 @@ const seedDatabase = async () => {
     console.log('========================================');
     console.log('\nDemo credentials:');
     console.log('Email: demo@example.com');
-    console.log('Password: demo123');
+    console.log('Demo login users provisioned from the local environment.');
     console.log('\nSeeded data:');
     console.log('- 18 Emails');
     console.log('- 15 Draft Responses');

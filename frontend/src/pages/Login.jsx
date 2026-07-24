@@ -82,8 +82,8 @@ const Login = () => {
   };
 
   const fillDemoCredentials = () => {
-    setEmail('demo@example.com');
-    setPassword('demo123');
+    setEmail(import.meta.env.VITE_DEMO_EMAIL || '');
+    setPassword(import.meta.env.VITE_DEMO_PASSWORD || '');
   };
 
   const switchMode = (newMode) => {
