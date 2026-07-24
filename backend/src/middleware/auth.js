@@ -22,10 +22,14 @@ const authenticateToken = (req, res, next) => {
 };
 
 const generateToken = (user) => {
+  const configuredExpiry = process.env.JWT_EXPIRES_IN;
+  const expiresIn = configuredExpiry && /^\d+(?:ms|s|m|h|d|w|y)$/.test(configuredExpiry)
+    ? configuredExpiry
+    : '24h';
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role, tenant_id: user.tenant_id },
     JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+    { expiresIn }
   );
 };
 
