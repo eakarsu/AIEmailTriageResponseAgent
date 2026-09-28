@@ -276,7 +276,7 @@ const Login = () => {
                 onClick={fillDemoCredentials}
                 className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors"
               >
-                Use Demo Credentials
+                Auto Fill Demo Credentials
               </button>
             </div>
           </>
